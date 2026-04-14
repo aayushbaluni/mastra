@@ -38,6 +38,7 @@ export function createToolCallStep<Tools extends ToolSet = ToolSet, OUTPUT = und
   modelSpanTracker,
   _internal,
   logger,
+  mastra,
 }: OuterLLMRun<Tools, OUTPUT>) {
   return createStep({
     id: 'toolCallStep',
@@ -545,6 +546,21 @@ export function createToolCallStep<Tools extends ToolSet = ToolSet, OUTPUT = und
           }
         }
 
+        // FGA authorization check before tool execution
+        const toolFgaProvider = mastra?.getServer?.()?.fga;
+        if (toolFgaProvider) {
+          const fgaUser = requestContext?.get('user');
+          if (fgaUser) {
+            const { checkFGA } = await import('../../../auth/ee/fga-check');
+            await checkFGA({
+              fgaProvider: toolFgaProvider,
+              user: fgaUser,
+              resource: { type: 'tool', id: inputData.toolName },
+              permission: 'tools:execute',
+            });
+          }
+        }
+
         const result = await tool.execute(args, toolOptions);
 
         // Call onOutput hook after successful execution
@@ -563,6 +579,10 @@ export function createToolCallStep<Tools extends ToolSet = ToolSet, OUTPUT = und
 
         return { result, ...inputData };
       } catch (error) {
+        // Re-throw FGA authorization errors instead of swallowing them
+        if (error instanceof Error && error.name === 'FGADeniedError') {
+          throw error;
+        }
         return {
           error: error as Error,
           ...inputData,

@@ -4,7 +4,7 @@ import { MastraCompositeStore, FilesystemStore } from '@mastra/core/storage';
 import { MastraEditor } from '@mastra/editor';
 import { LibSQLStore } from '@mastra/libsql';
 
-import { mastraAuth, rbacProvider } from './auth';
+import { mastraAuth, rbacProvider, fgaProvider } from './auth';
 import { Observability, DefaultExporter, CloudExporter, SensitiveDataFilter } from '@mastra/observability';
 import { z } from 'zod';
 import { ComposioToolProvider } from '@mastra/editor/composio';
@@ -108,10 +108,11 @@ const config = {
     sourcemap: true,
   },
   editor: new MastraEditor(),
-  // server: {
-  //   auth: mastraAuth,
-  //   rbac: rbacProvider,
-  // },
+  server: {
+    auth: mastraAuth,
+    // rbac: rbacProvider,
+    fga: fgaProvider,
+  },
 };
 
 export const mastra = new Mastra({
